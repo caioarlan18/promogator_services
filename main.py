@@ -10,6 +10,9 @@ app = FastAPI()
 # Se você definir a variável de ambiente API_TOKEN no easypanel, o serviço
 # passa a exigir o header X-Token em toda chamada. Deixe em branco pra não exigir nada.
 API_TOKEN = os.environ.get("API_TOKEN", "")
+# Opcional: defina PROXY_URL no easypanel no formato "usuario:senha@host:porta"
+# pra rotear as chamadas por um proxy residencial, caso o bloqueio seja por IP.
+PROXY_URL = os.environ.get("PROXY_URL", "")
 
 
 class ScrapeRequest(BaseModel):
@@ -25,7 +28,15 @@ def scrape(req: ScrapeRequest, x_token: Optional[str] = Header(default=None)):
         raise HTTPException(status_code=401, detail="Token inválido")
 
     try:
-        with SB(uc=True, xvfb=True) as sb:
+        sb_kwargs = {
+            "uc": True,
+            "xvfb": True,
+            "chromium_arg": "--blink-settings=imagesEnabled=false",
+        }
+        if PROXY_URL:
+            sb_kwargs["proxy"] = PROXY_URL
+
+        with SB(**sb_kwargs) as sb:
             sb.uc_open_with_reconnect(req.url, reconnect_time=req.reconnect_time)
 
             if req.wait_selector:
