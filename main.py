@@ -37,7 +37,8 @@ def scrape(req: ScrapeRequest, x_token: Optional[str] = Header(default=None)):
             sb_kwargs["proxy"] = PROXY_URL
 
         with SB(**sb_kwargs) as sb:
-            sb.uc_open_with_reconnect(req.url, reconnect_time=req.reconnect_time)
+            sb.activate_cdp_mode(req.url)
+            sb.sleep(req.reconnect_time)
 
             if req.wait_selector:
                 try:
