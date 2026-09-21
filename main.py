@@ -25,7 +25,7 @@ def scrape(req: ScrapeRequest, x_token: Optional[str] = Header(default=None)):
         raise HTTPException(status_code=401, detail="Token inválido")
 
     try:
-        with SB(uc=True, headless=True) as sb:
+        with SB(uc=True, xvfb=True) as sb:
             sb.uc_open_with_reconnect(req.url, reconnect_time=req.reconnect_time)
 
             if req.wait_selector:
