@@ -4,7 +4,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 # Dependências de sistema + Google Chrome (necessário pro modo UC do SeleniumBase)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        wget gnupg unzip curl \
+        wget gnupg unzip curl xvfb \
         libnss3 libatk-bridge2.0-0 libgtk-3-0 libgbm1 libasound2 \
         libxss1 libxtst6 fonts-liberation xdg-utils ca-certificates \
     && wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | gpg --dearmor -o /usr/share/keyrings/google-chrome.gpg \
