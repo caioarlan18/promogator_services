@@ -1,6 +1,4 @@
-import gc
 import os
-import subprocess
 import threading
 from typing import Optional
 
@@ -31,16 +29,6 @@ class ScrapeRequest(BaseModel):
     timeout: int = 12          # segundos esperando o wait_selector aparecer
     reconnect_time: int = 4    # segundos que o modo UC espera antes de "reconectar" (evasão)
     use_proxy: bool = False    # só ativa o proxy residencial quando explicitamente pedido (ex: Amazon)
-
-
-def limpar_recursos_zumbis():
-    """Força o encerramento de subprocessos órfãos do Chrome e aciona a coleta de lixo da memória."""
-    try:
-        subprocess.run(["pkill", "-f", "chrome"], check=False)
-        subprocess.run(["pkill", "-f", "chromedriver"], check=False)
-    except Exception:
-        pass
-    gc.collect()
 
 
 def detectar_pagina_ruim(html: str) -> Optional[str]:
@@ -104,15 +92,12 @@ def scrape(req: ScrapeRequest, x_token: Optional[str] = Header(default=None)):
 
             problema = detectar_pagina_ruim(html)
             if not problema:
-                limpar_recursos_zumbis()
                 return {"data": html, "tentativas": tentativa}
 
             ultimo_problema = problema
 
         except Exception as e:
             ultimo_problema = str(e)
-        finally:
-            limpar_recursos_zumbis()
 
     raise HTTPException(
         status_code=502,
