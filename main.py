@@ -33,13 +33,16 @@ class ScrapeRequest(BaseModel):
 
 def detectar_pagina_ruim(html: str) -> Optional[str]:
     """Retorna uma descrição do problema se o HTML for uma tela de erro
-    (do Chrome, bloqueio da Amazon, ou captcha não resolvido) em vez de conteúdo real."""
+    (do Chrome, bloqueio da Amazon, captcha não resolvido ou 404 falso) em vez de conteúdo real."""
     if 'id="main-frame-error"' in html:
         return "Erro de rede do Chrome (proxy/túnel falhou nessa tentativa)"
     if "Cachorros da Amazon" in html or "Amazon.com.br Algo deu errado" in html:
         return "Bloqueio de bot da Amazon (tela de erro genérica)"
     if 'id="altcha_checkbox"' in html or "Captcha Magalu" in html:
         return "Captcha ALTCHA não resolvido (Magalu)"
+    if "Não encontramos essa página" in html or 'name="pagina_nao_encontrada"' in html:
+        return "Página 404 temporária/falsa do Magalu (carregamento incompleto)"
+
     return None
 
 
