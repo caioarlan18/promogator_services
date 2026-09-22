@@ -1,4 +1,6 @@
+import gc
 import os
+import subprocess
 import threading
 from typing import Optional
 
@@ -31,6 +33,16 @@ class ScrapeRequest(BaseModel):
     use_proxy: bool = False    # só ativa o proxy residencial quando explicitamente pedido (ex: Amazon)
 
 
+def limpar_recursos_zumbis():
+    """Força o encerramento de subprocessos órfãos do Chrome e aciona a coleta de lixo da memória."""
+    try:
+        subprocess.run(["pkill", "-f", "chrome"], check=False)
+        subprocess.run(["pkill", "-f", "chromedriver"], check=False)
+    except Exception:
+        pass
+    gc.collect()
+
+
 def detectar_pagina_ruim(html: str) -> Optional[str]:
     """Retorna uma descrição do problema se o HTML for uma tela de erro
     (do Chrome, bloqueio da Amazon, captcha não resolvido ou 404 falso) em vez de conteúdo real."""
@@ -54,8 +66,6 @@ def tentar_resolver_altcha(sb, espera: int = 6) -> None:
             sb.click("#altcha_checkbox")
             sb.sleep(espera)
     except Exception:
-        # Se não conseguir clicar por qualquer motivo, segue o fluxo normal —
-        # o detectar_pagina_ruim mais abaixo vai pegar e contar como falha
         pass
 
 
@@ -72,7 +82,7 @@ def scrape(req: ScrapeRequest, x_token: Optional[str] = Header(default=None)):
             sb_kwargs = {
                 "uc": True,
                 "xvfb": True,
-                "chromium_arg": "--blink-settings=imagesEnabled=false",
+                "chromium_arg": "--blink-settings=imagesEnabled=false --disable-dev-shm-usage --no-sandbox",
             }
             if PROXY_URL and req.use_proxy:
                 sb_kwargs["proxy"] = PROXY_URL
@@ -94,16 +104,16 @@ def scrape(req: ScrapeRequest, x_token: Optional[str] = Header(default=None)):
 
             problema = detectar_pagina_ruim(html)
             if not problema:
-                # Deu certo — devolve já, sem gastar as tentativas restantes
+                limpar_recursos_zumbis()
                 return {"data": html, "tentativas": tentativa}
 
             ultimo_problema = problema
-            # Continua pro próximo laço, que abre uma sessão nova (IP novo)
 
         except Exception as e:
             ultimo_problema = str(e)
+        finally:
+            limpar_recursos_zumbis()
 
-    # Esgotou as tentativas internas sem sucesso
     raise HTTPException(
         status_code=502,
         detail=f"Falhou após {TENTATIVAS_INTERNAS} tentativas internas. Último problema: {ultimo_problema}",
